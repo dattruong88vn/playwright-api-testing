@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "types": [
+            "node"
+        ],
+        "baseUrl": ".",
+        "paths": {
+            "@/*": [
+                "./*"
+            ]
+        },
+        "esModuleInterop": true
+    }
+}
