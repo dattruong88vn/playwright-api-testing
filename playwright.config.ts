@@ -2,7 +2,6 @@ import "dotenv/config"; // phải nằm trên cùng
 
 import { defineConfig, devices } from "@playwright/test";
 
-import { AUTH_FILE } from "@/utils/constants";
 import { requireEnv } from "@/utils/env";
 
 /**
