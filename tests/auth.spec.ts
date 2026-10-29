@@ -1,16 +1,8 @@
-import { expect, test } from "@playwright/test";
-
-import AuthApi from "@/api/auth";
-
 import { PASSWORD, USERNAME } from "@/utils/constants";
 
-let authApi: AuthApi;
+import { expect, test } from "@/fixtures/auth";
 
-test.beforeEach(async ({ request }) => {
-  authApi = new AuthApi(request);
-});
-
-test("/auth: get token success with correct user", async () => {
+test("/auth: get token success with correct user", async ({ authApi }) => {
   const response = await authApi.getToken({
     username: USERNAME,
     password: PASSWORD,
@@ -35,7 +27,7 @@ test.describe("auth rejects invalid credentials", () => {
   ];
 
   for (const { name, data } of invalidCases) {
-    test(name, async () => {
+    test(name, async ({ authApi }) => {
       const response = await authApi.getToken(data);
       expect(response.status()).toBe(200); // Restful-Booker trả 200 kèm reason khi sai thông tin, không dùng 401
       const responseBody = await response.json();

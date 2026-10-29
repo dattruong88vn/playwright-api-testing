@@ -5,15 +5,12 @@ import BookingApi from "@/api/booking";
 import { mockBookingData } from "@/data/booking-data";
 import { NewBooking } from "@/models/booking";
 
-interface ApiFixtures {
-  bookingApi: BookingApi;
-}
-
 interface BookingFixtures {
+  bookingApi: BookingApi;
   bookingCreate: NewBooking;
 }
 
-export const test = base.extend<ApiFixtures & BookingFixtures>({
+export const test = base.extend<BookingFixtures>({
   // API
   bookingApi: async ({ request }, use) => {
     const bookingApi = new BookingApi(request);
@@ -25,8 +22,6 @@ export const test = base.extend<ApiFixtures & BookingFixtures>({
     expect(response.status()).toBe(200);
     const booking: NewBooking = await response.json();
     await use(booking);
-
-    // delete booking
   },
 });
 
