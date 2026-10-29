@@ -4,6 +4,27 @@ import { mockBookingData } from "@/data/booking-data";
 import { expect, test } from "@/fixtures";
 import { NewBooking } from "@/models/booking";
 
+const invalidCases = [
+  {
+    name: "rejects an update without a token",
+    data: {
+      firstname: "Changed",
+      totalprice: 999,
+      depositpaid: false,
+    },
+    token: undefined,
+  },
+  {
+    name: "rejects an update with invalid token",
+    data: {
+      firstname: "Changed again",
+      totalprice: 1234,
+      depositpaid: false,
+    },
+    token: "dummy token",
+  },
+];
+
 test.describe("/booking: create new booking", () => {
   test("creates a booking and returns the submitted data", async ({
     bookingApi,
@@ -39,27 +60,6 @@ test.describe("/booking: get detail booking", () => {
 });
 
 test.describe("/booking: update booking", () => {
-  const invalidCases = [
-    {
-      name: "rejects an update without a token",
-      data: {
-        firstname: "Changed",
-        totalprice: 999,
-        depositpaid: false,
-      },
-      token: undefined,
-    },
-    {
-      name: "rejects an update with invalid token",
-      data: {
-        firstname: "Changed again",
-        totalprice: 1234,
-        depositpaid: false,
-      },
-      token: "dummy token",
-    },
-  ];
-
   for (const { name, data, token } of invalidCases) {
     test(
       name,
@@ -109,7 +109,66 @@ test.describe("/booking: update booking", () => {
     expect(detailResponse.status()).toBe(200);
     expect(await detailResponse.json()).toEqual(newData);
   });
-  //// booking does not exist
+});
 
-  //// missing data: firstname, lastname...
+test.describe("/booking: update booking partially", () => {
+  for (const { name, data, token } of invalidCases) {
+    test(
+      name,
+      async ({ bookingCreate: { booking, bookingid }, bookingApi }) => {
+        const newData = mockBookingData(data);
+        const responseUpdateBooking = await bookingApi.partialUpdateBooking(
+          bookingid,
+          newData,
+          token,
+        );
+        expect(responseUpdateBooking.status()).toBe(403);
+        expect(await responseUpdateBooking.text()).toBe("Forbidden");
+
+        const responseBookingDetail =
+          await bookingApi.getBookingDetail(bookingid);
+        expect(responseBookingDetail.status()).toBe(200);
+        expect(await responseBookingDetail.json()).toEqual(booking);
+      },
+    );
+  }
+
+  const patchDatas = [
+    {
+      name: "updates only the submitted fields and keeps the rest",
+      data: { firstname: "Dat", lastname: "truong", totalprice: 88568 },
+    },
+    {
+      name: "updates only the submitted fields (nested fields) and keeps the rest",
+      data: {
+        bookingdates: { checkin: "2020-01-01", checkout: "2020-01-10" },
+        additionalneeds: "Dinner",
+      },
+    },
+  ];
+
+  for (const { name, data } of patchDatas) {
+    test(
+      name,
+      async ({ bookingCreate: { bookingid, booking }, bookingApi, token }) => {
+        const patchData = data;
+        const updateResponse = await bookingApi.partialUpdateBooking(
+          bookingid,
+          patchData,
+          token,
+        );
+        expect(updateResponse.status()).toBe(200);
+        const updateResponseBody = await updateResponse.json();
+        expect(updateResponseBody).not.toEqual(booking);
+        expect(updateResponseBody).toEqual({ ...booking, ...patchData });
+
+        const detailResponse = await bookingApi.getBookingDetail(bookingid);
+        expect(detailResponse.status()).toBe(200);
+        expect(await detailResponse.json()).toEqual({
+          ...booking,
+          ...patchData,
+        });
+      },
+    );
+  }
 });

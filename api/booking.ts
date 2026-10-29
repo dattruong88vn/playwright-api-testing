@@ -2,7 +2,7 @@ import { APIRequestContext, APIResponse } from "@playwright/test";
 
 import { BOOKING_ENDPOINT } from "@/utils/route";
 
-import { Booking } from "@/models/booking";
+import { Booking, PartialBooking } from "@/models/booking";
 
 class BookingApi {
   constructor(private request: APIRequestContext) {}
@@ -17,6 +17,13 @@ class BookingApi {
 
   updateBooking(id: number, data: Booking, token?: string) {
     return this.request.put(`${BOOKING_ENDPOINT}/${id}`, {
+      data,
+      headers: token ? { Cookie: `token=${token}` } : {},
+    });
+  }
+
+  partialUpdateBooking(id: number, data: PartialBooking, token?: string) {
+    return this.request.patch(`${BOOKING_ENDPOINT}/${id}`, {
       data,
       headers: { Cookie: `token=${token}` },
     });

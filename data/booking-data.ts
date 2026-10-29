@@ -1,9 +1,7 @@
-import { Booking, BookingDate } from "@/models/booking";
+import { Booking, PartialBooking } from "@/models/booking";
 
 export const mockBookingData = (
-  overrides: Partial<Omit<Booking, "bookingdates" | "bookingid">> & {
-    bookingdates?: Partial<BookingDate>;
-  } = {},
+  overrides: PartialBooking = {},
 ): Omit<Booking, "bookingid"> => {
   return {
     firstname: "Dat",

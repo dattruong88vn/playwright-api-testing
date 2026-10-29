@@ -14,3 +14,9 @@ export interface Booking {
 }
 
 export type NewBooking = { booking: Booking } & { bookingid: number };
+
+export type PartialBooking = Partial<
+  Omit<Booking, "bookingdates" | "bookingid">
+> & {
+  bookingdates?: Partial<BookingDate>;
+};
