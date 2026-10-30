@@ -1,8 +1,10 @@
+import BookingApi from "@/api/booking";
+
 import { NON_EXISTENT_BOOKING_ID } from "@/utils/constants";
 
 import { mockBookingData } from "@/data/booking-data";
 import { expect, test } from "@/fixtures";
-import { NewBooking } from "@/models/booking";
+import { Booking, NewBooking } from "@/models/booking";
 
 const invalidCases = [
   {
@@ -25,6 +27,16 @@ const invalidCases = [
   },
 ];
 
+const expectBookingToEqual = async (
+  bookingApi: BookingApi,
+  bookingId: number,
+  expected: Booking,
+) => {
+  const responseBookingDetail = await bookingApi.getBookingDetail(bookingId);
+  expect(responseBookingDetail.status()).toBe(200);
+  expect(await responseBookingDetail.json()).toEqual(expected);
+};
+
 test.describe("/booking: create new booking", () => {
   test("creates a booking and returns the submitted data", async ({
     bookingApi,
@@ -39,13 +51,11 @@ test.describe("/booking: create new booking", () => {
 });
 
 test.describe("/booking: get detail booking", () => {
-  test("get with valid booking id", async ({ bookingCreate, bookingApi }) => {
-    const responseBookingDetail = await bookingApi.getBookingDetail(
-      bookingCreate.bookingid,
-    );
-    expect(responseBookingDetail.status()).toBe(200);
-    const responseBodyBookingDetail = await responseBookingDetail.json();
-    expect(responseBodyBookingDetail).toEqual(bookingCreate.booking);
+  test("get with valid booking id", async ({
+    bookingCreate: { booking, bookingid },
+    bookingApi,
+  }) => {
+    expectBookingToEqual(bookingApi, bookingid, booking);
   });
 
   test("returns 404 when the booking does not exist", async ({
@@ -73,10 +83,7 @@ test.describe("/booking: update booking", () => {
         expect(responseUpdateBooking.status()).toBe(403);
         expect(await responseUpdateBooking.text()).toBe("Forbidden");
 
-        const responseBookingDetail =
-          await bookingApi.getBookingDetail(bookingid);
-        expect(responseBookingDetail.status()).toBe(200);
-        expect(await responseBookingDetail.json()).toEqual(booking);
+        expectBookingToEqual(bookingApi, bookingid, booking);
       },
     );
   }
@@ -105,9 +112,7 @@ test.describe("/booking: update booking", () => {
     expect(updateResponseBody).not.toEqual(booking);
     expect(updateResponseBody).toEqual(newData);
 
-    const detailResponse = await bookingApi.getBookingDetail(bookingid);
-    expect(detailResponse.status()).toBe(200);
-    expect(await detailResponse.json()).toEqual(newData);
+    expectBookingToEqual(bookingApi, bookingid, booking);
   });
 });
 
@@ -125,10 +130,7 @@ test.describe("/booking: update booking partially", () => {
         expect(responseUpdateBooking.status()).toBe(403);
         expect(await responseUpdateBooking.text()).toBe("Forbidden");
 
-        const responseBookingDetail =
-          await bookingApi.getBookingDetail(bookingid);
-        expect(responseBookingDetail.status()).toBe(200);
-        expect(await responseBookingDetail.json()).toEqual(booking);
+        expectBookingToEqual(bookingApi, bookingid, booking);
       },
     );
   }
@@ -160,9 +162,7 @@ test.describe("/booking: update booking partially", () => {
         const updateResponseBody = await updateResponse.json();
         expect(updateResponseBody).toEqual({ ...booking, ...data });
 
-        const detailResponse = await bookingApi.getBookingDetail(bookingid);
-        expect(detailResponse.status()).toBe(200);
-        expect(await detailResponse.json()).toEqual({
+        expectBookingToEqual(bookingApi, bookingid, {
           ...booking,
           ...data,
         });
@@ -195,9 +195,37 @@ test.describe("/booking: update booking partially", () => {
     const updateResponseBody = await updateResponse.json();
     expect(updateResponseBody).toEqual(expected);
 
-    const detailResponse = await bookingApi.getBookingDetail(bookingid);
-    expect(detailResponse.status()).toBe(200);
-    expect(await detailResponse.json()).toEqual(expected);
+    expectBookingToEqual(bookingApi, bookingid, expected);
     // Hiện API trả checkout "0NaN-aN-aN".
   });
+});
+
+test.describe("/booking: delete booking", () => {
+  test("deletes the booking and it can no longer be fetched", async ({
+    bookingCreate: { bookingid },
+    bookingApi,
+    token,
+  }) => {
+    const responseDelete = await bookingApi.deleteBooking(bookingid, token);
+    expect(responseDelete.status()).toBe(201);
+
+    const responseDetail = await bookingApi.getBookingDetail(bookingid);
+    expect(responseDetail.status()).toBe(404);
+  });
+
+  const invalidCases = [
+    { name: "rejects a delete with an invalid token", token: "12345" },
+    { name: "rejects a delete without a token", token: undefined },
+  ];
+
+  for (const { name, token } of invalidCases) {
+    test(
+      name,
+      async ({ bookingCreate: { bookingid, booking }, bookingApi }) => {
+        const responseDelete = await bookingApi.deleteBooking(bookingid, token);
+        expect(responseDelete.status()).toBe(403);
+        expectBookingToEqual(bookingApi, bookingid, booking);
+      },
+    );
+  }
 });
