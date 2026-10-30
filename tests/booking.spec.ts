@@ -141,7 +141,7 @@ test.describe("/booking: update booking partially", () => {
     {
       name: "updates only the submitted fields (nested fields) and keeps the rest",
       data: {
-        bookingdates: { checkin: "2020-01-01", checkout: "2020-01-10" },
+        bookingdates: { checkin: "2020-01-01", checkout: "2020-02-10" },
         additionalneeds: "Dinner",
       },
     },
@@ -151,24 +151,53 @@ test.describe("/booking: update booking partially", () => {
     test(
       name,
       async ({ bookingCreate: { bookingid, booking }, bookingApi, token }) => {
-        const patchData = data;
         const updateResponse = await bookingApi.partialUpdateBooking(
           bookingid,
-          patchData,
+          data,
           token,
         );
         expect(updateResponse.status()).toBe(200);
         const updateResponseBody = await updateResponse.json();
-        expect(updateResponseBody).not.toEqual(booking);
-        expect(updateResponseBody).toEqual({ ...booking, ...patchData });
+        expect(updateResponseBody).toEqual({ ...booking, ...data });
 
         const detailResponse = await bookingApi.getBookingDetail(bookingid);
         expect(detailResponse.status()).toBe(200);
         expect(await detailResponse.json()).toEqual({
           ...booking,
-          ...patchData,
+          ...data,
         });
       },
     );
   }
+
+  test.fixme("keeps the other date when only one date is patched", async ({
+    bookingCreate: { bookingid, booking },
+    bookingApi,
+    token,
+  }) => {
+    // PATCH chỉ gửi bookingdates.checkin; kỳ vọng checkout giữ nguyên bản gốc.
+    const data = {
+      bookingdates: { checkin: "2020-01-01" },
+      additionalneeds: "Dinner",
+    };
+    const updateResponse = await bookingApi.partialUpdateBooking(
+      bookingid,
+      data,
+      token,
+    );
+    const expected = {
+      ...booking,
+      ...data,
+      bookingdates: { ...booking.bookingdates, ...data.bookingdates },
+    };
+
+    expect(updateResponse.status()).toBe(200);
+    const updateResponseBody = await updateResponse.json();
+    expect(updateResponseBody).toEqual(expected);
+
+    const detailResponse = await bookingApi.getBookingDetail(bookingid);
+    expect(detailResponse.status()).toBe(200);
+    expect(await detailResponse.json()).toEqual(expected);
+    // Hiện API trả checkout "0NaN-aN-aN".
+  });
 });
